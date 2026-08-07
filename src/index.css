@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+/*
+ * Fix: submenu trong MenuLeft.jsx dùng class "collapse" / "collapse in" theo
+ * kiểu Bootstrap 3 (được điều khiển bởi metismenu.min.css: `.metismenu .collapse
+ * {display:none}` / `.metismenu .collapse.in {display:block}`).
+ *
+ * Nhưng Tailwind cũng có utility "collapse" (visibility utility, dùng cho
+ * table row: `.collapse { visibility: collapse }`) và Tailwind JIT quét thấy
+ * chữ "collapse" xuất hiện trong MenuLeft.jsx nên tự sinh ra rule này.
+ * `visibility: collapse` trên phần tử không phải table row/col có hiệu ứng
+ * giống `visibility: hidden` -> submenu luôn vô hình dù display đã là block.
+ *
+ * Ghi đè lại visibility cho đúng scope (.submenu.collapse) để không đụng tới
+ * các chỗ khác lỡ dùng utility "collapse" gốc của Tailwind.
+ */
+.submenu.collapse {
+    visibility: visible;
+}
+
+/*
+ * Fix: menu trái không scroll được khi danh sách menu (kể cả submenu đang mở)
+ * cao hơn viewport.
+ *
+ * Bản gốc mt219 (Vue2) dùng jQuery plugin slimScroll, gán qua class
+ * "slimscroll-menu" — plugin đó tự set overflow-y + chiều cao bằng JS lúc
+ * mounted(). infuncms KHÔNG port slimScroll/jQuery sang (xem MenuLeft.jsx),
+ * chỉ còn lại class rỗng không có tác dụng gì -> menu tràn ra ngoài khung
+ * `.side-menu` (position: fixed; top: 55px; bottom: 0 — xem style.css) mà
+ * không cuộn được.
+ *
+ * Thay bằng scroll CSS thuần. `.side-menu` là position:fixed nên có chiều
+ * cao xác định (viewport - 55px) -> height:100% ở đây resolve đúng theo
+ * chiều cao đó, overflow-y:auto mới có tác dụng.
+ *
+ * Không đụng tới trường hợp `.enlarged .slimscroll-menu` (chế độ sidebar thu
+ * gọn, hover xổ submenu ra ngoài) — style.css đã có sẵn
+ * `overflow: inherit !important` riêng cho case đó, !important nên vẫn thắng
+ * quy tắc dưới đây bất kể thứ tự nạp CSS.
+ */
+.left.side-menu .slimscroll-menu {
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.left.side-menu .slimscroll-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.left.side-menu .slimscroll-menu::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.25);
+    border-radius: 3px;
+}
+
+.left.side-menu .slimscroll-menu::-webkit-scrollbar-track {
+    background-color: transparent;
+}

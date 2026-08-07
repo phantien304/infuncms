@@ -1,0 +1,61 @@
+# syntax=docker/dockerfile:1
+# ═══════════════════════════════════════════════════════════════════════════
+# STAGING/PRODUCTION image cho infuncms (React SPA) — BẤT BIẾN, KHÔNG mount
+# code. Mirror pattern ../infun/docker/php/Dockerfile.staging (assets → app
+# → web), nhưng infuncms không có tầng PHP — chỉ còn 2 stage:
+#
+#   build → npm run build ra dist/ (Vite)
+#   web   → nginx bake sẵn dist/  (target chạy, KHÔNG cần mount)
+#
+# QUAN TRỌNG — khác biệt với backend infun (đọc kỹ trước khi đụng CI):
+# Vite BAKE các biến VITE_* vào bundle JS NGAY LÚC BUILD (import.meta.env),
+# không đọc lại lúc container chạy như biến môi trường PHP thông thường.
+# Nghĩa là 1 image đã build cho staging (trỏ API infun.co) KHÔNG THỂ tái sử
+# dụng cho production (trỏ API tienpv.shop) bằng cách retag — phải BUILD LẠI
+# với --build-arg khác. Đây là lý do deploy-production.yml của infuncms
+# REBUILD thay vì "docker buildx imagetools create" (retag không rebuild)
+# như deploy-production.yml của backend infun — xem comment trong workflow đó.
+#
+# Build tay (test local):
+#   docker build -f Dockerfile.staging \
+#     --build-arg VITE_API_BASE_URL=https://tienpv.shop/rcms \
+#     --build-arg VITE_LARAVEL_ORIGIN=https://tienpv.shop \
+#     -t infuncms-web:local .
+# ═══════════════════════════════════════════════════════════════════════════
+
+# ───────────────────────────────────────────────────────────────────────────
+# STAGE 1 — build: npm run build (Vite) → dist/
+# ───────────────────────────────────────────────────────────────────────────
+FROM node:20-alpine AS build
+WORKDIR /app
+
+# Cài dependency trước (cache layer khi package.json không đổi)
+COPY package.json package-lock.json* ./
+RUN npm install --no-audit --no-fund
+
+# Copy source (.dockerignore đã loại node_modules/dist/.git)
+COPY . .
+
+# Build-arg -> env để Vite đọc lúc `npm run build` (import.meta.env.VITE_*).
+# KHÔNG có default hợp lý cho production — thiếu thì phải fail rõ ràng thay
+# vì âm thầm build ra bundle trỏ nhầm API, xem README hoặc workflow CI để
+# biết giá trị đúng cho từng môi trường.
+ARG VITE_API_BASE_URL
+ARG VITE_LARAVEL_ORIGIN
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL} \
+    VITE_LARAVEL_ORIGIN=${VITE_LARAVEL_ORIGIN}
+
+RUN if [ -z "$VITE_API_BASE_URL" ] || [ -z "$VITE_LARAVEL_ORIGIN" ]; then \
+        echo "ERROR: thiếu --build-arg VITE_API_BASE_URL / VITE_LARAVEL_ORIGIN" >&2; \
+        exit 1; \
+    fi
+
+RUN npm run build
+
+# ───────────────────────────────────────────────────────────────────────────
+# STAGE 2 — web: nginx phục vụ dist/ đã build sẵn (KHÔNG mount code)
+# ───────────────────────────────────────────────────────────────────────────
+FROM nginx:1.27-alpine AS web
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY deploy/nginx-spa.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80

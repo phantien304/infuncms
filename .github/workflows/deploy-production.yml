@@ -1,0 +1,104 @@
+name: Deploy production
+
+# Phát hành infuncms lên PRODUCTION (cms.tienpv.shop).
+#
+# KHÁC backend infun/.github/workflows/deploy-production.yml: bên đó PROMOTE
+# (retag :sha-XXX -> :production, KHÔNG build lại) vì PHP đọc config lúc
+# container CHẠY. infuncms là Vite SPA — VITE_API_BASE_URL/VITE_LARAVEL_ORIGIN
+# bị BAKE vào bundle JS ngay lúc `npm run build`, nên image :staging (build
+# với API infun.co) không thể tái dùng cho production (API tienpv.shop) bằng
+# cách retag. Job dưới đây REBUILD từ đúng git ref đã publish, với build-arg
+# production — vẫn giữ đúng tinh thần "release có chủ đích + cổng phê duyệt",
+# chỉ khác bước cuối là build thay vì retag. Xem chi tiết trong
+# Dockerfile.staging.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag/commit muốn phát hành (bỏ trống = commit hiện tại). Dùng ref cũ để rollback."
+        required: false
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_WEB: ghcr.io/phantien304/infuncms-web
+  PROD_VITE_API_BASE_URL: ${{ vars.PROD_VITE_API_BASE_URL || 'https://tienpv.shop/rcms' }}
+  PROD_VITE_LARAVEL_ORIGIN: ${{ vars.PROD_VITE_LARAVEL_ORIGIN || 'https://tienpv.shop' }}
+
+jobs:
+  # ── 1. BUILD (thay vì promote/retag — xem giải thích đầu file) ────────────
+  # `environment: production` = CỔNG PHÊ DUYỆT THỦ CÔNG, job treo chờ Approve
+  # (Settings -> Environments -> production -> Required reviewers).
+  build-production:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      ref: ${{ steps.pick.outputs.ref }}
+    steps:
+      - id: pick
+        run: echo "ref=${{ github.event.inputs.ref || github.event.release.tag_name || github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pick.outputs.ref }}
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build & push infuncms-web (production build-args)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.staging
+          target: web
+          push: true
+          build-args: |
+            VITE_API_BASE_URL=${{ env.PROD_VITE_API_BASE_URL }}
+            VITE_LARAVEL_ORIGIN=${{ env.PROD_VITE_LARAVEL_ORIGIN }}
+          tags: |
+            ${{ env.IMAGE_WEB }}:production
+            ${{ env.IMAGE_WEB }}:sha-${{ steps.pick.outputs.ref }}-prod
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── 2. DEPLOY ──────────────────────────────────────────────────────────────
+  deploy:
+    needs: build-production
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.PROD_HOST }}" >> ~/.ssh/known_hosts
+
+      - uses: actions/checkout@v4
+
+      - name: Deploy to production EC2
+        run: |
+          REF="${{ needs.build-production.outputs.ref }}"
+          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -i ~/.ssh/id_ed25519 \
+            "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_HOST }}" \
+            'bash -s' -- "$REF" "production" < deploy/prod-deploy.sh

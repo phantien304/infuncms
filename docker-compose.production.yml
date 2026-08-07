@@ -1,0 +1,37 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# PRODUCTION (AWS EC2 + Docker Compose) cho infuncms — image BẤT BIẾN kéo từ
+# ghcr (tag :production), KHÔNG build, KHÔNG mount code. Mirror
+# ../infun/docker-compose.production.yml.
+#
+# Chạy CÙNG máy EC2 với backend infun (/srv/infun), thư mục riêng /srv/infuncms
+# — 2 service độc lập, cùng lộ diện ra Internet qua CHUNG 1 Cloudflare Tunnel
+# (không mở thêm port nào trên EC2, chỉ thêm 1 dòng ingress trỏ hostname
+# cms.tienpv.shop -> cổng nginx của service này). Xem
+# deploy/DEPLOY-cms.tienpv.shop.md.
+#
+# Biến ${...} lấy từ file .env đặt CÙNG THƯ MỤC (không commit).
+#
+#   docker compose -f docker-compose.production.yml pull
+#   docker compose -f docker-compose.production.yml up -d
+# ═══════════════════════════════════════════════════════════════════════════
+
+name: infuncms-production
+
+services:
+  infuncms-web:
+    image: ghcr.io/phantien304/infuncms-web:production
+    container_name: infuncms-web-prod
+    restart: unless-stopped
+    ports:
+      - "${PROD_CMS_WEB_PORT:-8200}:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/__lb_health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - infuncms-net
+
+networks:
+  infuncms-net:

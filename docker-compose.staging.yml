@@ -1,0 +1,43 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# STAGING (image bất biến) cho infuncms — mirror ../infun/docker-compose.staging.yml
+# nhưng chỉ có 1 service (nginx phục vụ SPA đã build tĩnh, không PHP/DB/Redis).
+#
+# `image:` để deploy-staging.yml (CI) `pull` bản đã build sẵn trên GitHub
+# runner. `build:` giữ song song để build tay tại chỗ nếu cần test nhanh —
+# cùng quy ước với backend infun (xem docs/STAGING.md phần "image bất biến").
+#
+#   docker compose -f docker-compose.staging.yml build \
+#     --build-arg VITE_API_BASE_URL=http://infun.co/rcms \
+#     --build-arg VITE_LARAVEL_ORIGIN=http://infun.co
+#   docker compose -f docker-compose.staging.yml up -d
+# ═══════════════════════════════════════════════════════════════════════════
+
+name: infuncms-staging
+
+services:
+  infuncms-web:
+    image: ghcr.io/phantien304/infuncms-web:staging
+    build:
+      context: .
+      dockerfile: Dockerfile.staging
+      args:
+        VITE_API_BASE_URL: ${STAGING_VITE_API_BASE_URL:-http://infun.co/rcms}
+        VITE_LARAVEL_ORIGIN: ${STAGING_VITE_LARAVEL_ORIGIN:-http://infun.co}
+    container_name: infuncms-web-staging
+    restart: unless-stopped
+    ports:
+      # 8200: tách khỏi 8100 (infun-web staging) để chạy song song trên cùng
+      # máy staging. Đổi qua STAGING_CMS_WEB_PORT nếu trùng cổng khác.
+      - "${STAGING_CMS_WEB_PORT:-8200}:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/__lb_health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - infuncms-net
+
+networks:
+  infuncms-net:
+    driver: bridge

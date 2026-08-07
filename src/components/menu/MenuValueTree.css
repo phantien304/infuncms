@@ -1,0 +1,258 @@
+/**
+ * MenuValueTree.css — style riêng cho khối cây menu_value (kéo-thả).
+ * Scope toàn bộ trong `.menu-value-tree` để không ảnh hưởng Tree ở chỗ khác.
+ *
+ * Bố cục mỗi dòng: [drag-handle] [mũi tên] [nhãn] [badge loại]  ...  [sửa] [xoá]
+ * — 2 icon sửa/xoá LUÔN nằm sát mép phải nhờ .node-title dùng flex
+ * space-between trên toàn bộ chiều rộng dòng (Tree có prop `blockNode`).
+ * -----------------------------------------------------------
+ */
+
+.menu-value-tree .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.menu-value-tree .toolbar .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.menu-value-tree .toolbar .btn .mdi {
+    font-size: 16px;
+}
+
+.menu-value-tree .toolbar .spacer {
+    flex: 1 1 auto;
+}
+
+.menu-value-tree .tree-search-input {
+    margin-top: 10px;
+    max-width: 320px;
+}
+
+.menu-value-tree .tree-panel {
+    margin-top: 12px;
+    background: #fff;
+    border: 1px solid #e4e7ec;
+    border-radius: 10px;
+    max-height: 560px;
+    overflow-y: auto;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.menu-value-tree .tree-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 12px;
+    color: #98a2b3;
+}
+
+.menu-value-tree .tree-empty .mdi {
+    font-size: 32px;
+    margin-bottom: 8px;
+    opacity: 0.6;
+}
+
+.menu-value-tree .tree-empty span {
+    font-size: 13px;
+}
+
+/* --- override antd Tree bên trong .tree-panel --- */
+
+.menu-value-tree .ant-tree {
+    background: transparent;
+    padding: 6px;
+}
+
+.menu-value-tree .ant-tree .ant-tree-treenode {
+    width: 100%;
+    padding: 0 6px 0 0;
+    margin-bottom: 1px;
+    border-radius: 6px;
+    align-items: center;
+    border-left: 3px solid transparent;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+/* Gạch phân tách nhẹ giữa các nhóm gốc (level 1) cho dễ theo dõi. */
+.menu-value-tree .ant-tree .ant-tree-treenode[aria-level='1'] {
+    margin-top: 6px;
+}
+
+.menu-value-tree .ant-tree .ant-tree-treenode:hover {
+    background-color: #f5f6f8;
+}
+
+.menu-value-tree .ant-tree .ant-tree-treenode-selected,
+.menu-value-tree .ant-tree .ant-tree-treenode-selected:hover {
+    background-color: #eef4ff !important;
+    border-left-color: #2563eb;
+}
+
+.menu-value-tree .ant-tree .ant-tree-node-content-wrapper {
+    background: transparent !important;
+    padding: 5px 6px;
+    border-radius: 4px;
+    min-height: 30px;
+    line-height: 20px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.menu-value-tree .ant-tree .ant-tree-node-content-wrapper:hover,
+.menu-value-tree .ant-tree .ant-tree-node-selected {
+    background: transparent !important;
+}
+
+.menu-value-tree .ant-tree .ant-tree-indent-unit::before {
+    border-color: #e4e7ec;
+}
+
+.menu-value-tree .ant-tree .ant-tree-switcher {
+    color: #98a2b3;
+}
+
+.menu-value-tree .ant-tree .ant-tree-draggable-icon {
+    opacity: 0.3;
+    transition: opacity 0.15s ease;
+}
+
+.menu-value-tree .ant-tree .ant-tree-treenode:hover .ant-tree-draggable-icon {
+    opacity: 0.75;
+}
+
+/* --- title row (render bởi decorate() trong MenuValueTree.jsx) --- */
+
+.menu-value-tree .node-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    font-size: 13.5px;
+    color: #344054;
+}
+
+.menu-value-tree .node-title .node-main {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.menu-value-tree .node-title .node-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: text;
+}
+
+.menu-value-tree .node-label-hit {
+    background: #fef0c7;
+    color: #93370d;
+    padding: 0 1px;
+    border-radius: 2px;
+}
+
+/* Input sửa tên tại chỗ — thay chỗ .node-label khi double-click. */
+.menu-value-tree .node-rename-input {
+    width: 180px;
+    height: 24px;
+}
+
+.menu-value-tree .node-rename-input .ant-input,
+.menu-value-tree .node-rename-input.ant-input {
+    padding: 0 6px;
+    font-size: 13px;
+}
+
+.menu-value-tree .node-title.is-active .node-label {
+    color: #2563eb;
+    font-weight: 600;
+}
+
+.menu-value-tree .node-badge {
+    flex: 0 0 auto;
+    font-size: 10px;
+    line-height: 16px;
+    padding: 0 6px;
+    border-radius: 999px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.menu-value-tree .node-badge.type-page {
+    color: #475467;
+    background: #f2f4f7;
+}
+
+.menu-value-tree .node-badge.type-category {
+    color: #175cd3;
+    background: #eff8ff;
+}
+
+.menu-value-tree .node-badge.type-information {
+    color: #6941c6;
+    background: #f4ebff;
+}
+
+.menu-value-tree .node-badge.type-product {
+    color: #067647;
+    background: #ecfdf3;
+}
+
+.menu-value-tree .node-badge.type-blogCategory {
+    color: #b54708;
+    background: #fffaeb;
+}
+
+/* Tham chiếu hỏng — item_id trỏ tới category/product/... đã bị xoá. */
+.menu-value-tree .node-badge.badge-broken {
+    color: #d92d20;
+    background: #fef3f2;
+    border: 1px solid #fecdca;
+}
+
+.menu-value-tree .node-actions {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    opacity: 0.45;
+    transition: opacity 0.15s ease;
+}
+
+.menu-value-tree .ant-tree-treenode:hover .node-actions,
+.menu-value-tree .node-title.is-active .node-actions {
+    opacity: 1;
+}
+
+.menu-value-tree .node-actions .mdi {
+    font-size: 15px;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #667085;
+}
+
+.menu-value-tree .node-actions .mdi-pencil-box-outline:hover {
+    color: #2563eb;
+    background: #dbe7ff;
+}
+
+.menu-value-tree .node-actions .mdi-close-circle-outline:hover {
+    color: #d92d20;
+    background: #fde2e1;
+}

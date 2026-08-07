@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <link href="/images/favicon.png" rel="icon" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Infun CMS</title>
+
+    <!--
+      Theme CSS của admin template cũ (mt219 resources/views/cms/index.blade.php).
+      Sidebar/topbar trong AppLayout.jsx + MenuLeft.jsx dùng class của theme này
+      (side-menu, metismenu, submenu collapse...) — thiếu các file này thì menu
+      trái không có style, coi như "không hiển thị".
+      Assets đã được copy sẵn vào public/css (giữ đúng thứ tự load như bản gốc).
+    -->
+    <link href="/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="/css/progress-bar.css" rel="stylesheet" />
+    <link href="/css/animate.css" rel="stylesheet" />
+    <link href="/css/vue2-animate.min.css" rel="stylesheet" />
+    <link href="/css/icons.css" rel="stylesheet" />
+    <link href="/css/metismenu.min.css" rel="stylesheet" />
+    <link href="/css/style.css" rel="stylesheet" />
+    <link href="/css/custom.css" rel="stylesheet" />
+    <link href="/css/v.5.7.0/css/all.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="cms-app"></div>
+    <script type="module" src="/src/app.jsx"></script>
+  </body>
+</html>

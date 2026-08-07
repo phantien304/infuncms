@@ -1,0 +1,92 @@
+name: Deploy staging
+
+# Push lên main = build image mới (npm run build với API trỏ staging infun.co)
+# + đẩy sang máy staging. Mirror ../infun/.github/workflows/deploy-staging.yml
+# (cùng máy staging, khác thư mục repo mirror: infuncms thay vì infun).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_WEB: ghcr.io/phantien304/infuncms-web
+  # Staging trỏ về backend infun.co (KHÔNG phải secret — domain public).
+  # Đổi qua repo Variables (Settings -> Secrets and variables -> Actions ->
+  # Variables) nếu staging cần trỏ backend khác mà không sửa workflow.
+  STAGING_VITE_API_BASE_URL: ${{ vars.STAGING_VITE_API_BASE_URL || 'http://infun.co/rcms' }}
+  STAGING_VITE_LARAVEL_ORIGIN: ${{ vars.STAGING_VITE_LARAVEL_ORIGIN || 'http://infun.co' }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build & push infuncms-web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.staging
+          target: web
+          push: true
+          build-args: |
+            VITE_API_BASE_URL=${{ env.STAGING_VITE_API_BASE_URL }}
+            VITE_LARAVEL_ORIGIN=${{ env.STAGING_VITE_LARAVEL_ORIGIN }}
+          # :staging = tag di động. :sha-XXX = tag bất biến — KHÔNG dùng để
+          # promote thẳng lên production như backend (Vite bake env lúc build,
+          # xem comment trong Dockerfile.staging) nhưng vẫn giữ để debug/rollback
+          # đúng đúng bản staging nào đang chạy.
+          tags: |
+            ${{ env.IMAGE_WEB }}:staging
+            ${{ env.IMAGE_WEB }}:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 100.99.170.2 >> ~/.ssh/known_hosts
+
+      # Repo mirror riêng cho infuncms trên máy staging (song song với
+      # /home/an-my/infun của backend) — xem deploy/DEPLOY-cms.tienpv.shop.md.
+      - name: Pull image + recreate container on staging
+        run: |
+          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -i ~/.ssh/id_ed25519 an-my@100.99.170.2 "
+            set -e
+            cd /home/an-my/infuncms
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+            docker compose -f docker-compose.staging.yml pull infuncms-web
+            docker compose -f docker-compose.staging.yml up -d --no-build infuncms-web
+            docker image prune -f
+          "
