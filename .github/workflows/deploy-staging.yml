@@ -1,8 +1,9 @@
 name: Deploy staging
 
-# Push lên main = build image mới (npm run build với API trỏ staging infun.co)
-# + đẩy sang máy staging. Mirror ../infun/.github/workflows/deploy-staging.yml
-# (cùng máy staging, khác thư mục repo mirror: infuncms thay vì infun).
+# Push lên main = build image mới (nginx + dist/ đã bake) + đẩy sang máy staging.
+# Build chạy trên GitHub-hosted runner. Máy staging chỉ `pull` image đã build
+# sẵn rồi recreate container — mirror ../infun/.github/workflows/deploy-staging.yml,
+# nhưng chỉ 1 service tĩnh (không PHP/DB/migrate).
 on:
   push:
     branches: [main]
@@ -15,11 +16,12 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_WEB: ghcr.io/phantien304/infuncms-web
-  # Staging trỏ về backend infun.co (KHÔNG phải secret — domain public).
-  # Đổi qua repo Variables (Settings -> Secrets and variables -> Actions ->
-  # Variables) nếu staging cần trỏ backend khác mà không sửa workflow.
-  STAGING_VITE_API_BASE_URL: ${{ vars.STAGING_VITE_API_BASE_URL || 'http://infun.co/rcms' }}
-  STAGING_VITE_LARAVEL_ORIGIN: ${{ vars.STAGING_VITE_LARAVEL_ORIGIN || 'http://infun.co' }}
+  # Vite BAKE các biến VITE_* vào bundle lúc build (không đọc lại lúc container
+  # chạy) — xem comment đầu Dockerfile.staging. Đổi giá trị ở đây nếu backend
+  # staging đổi domain, KHÔNG sửa trong docker-compose.staging.yml (chỉ dùng
+  # cho build tay tại chỗ).
+  STAGING_VITE_API_BASE_URL: http://infun.co/rcms
+  STAGING_VITE_LARAVEL_ORIGIN: http://infun.co
 
 jobs:
   build-and-push:
@@ -48,10 +50,11 @@ jobs:
           build-args: |
             VITE_API_BASE_URL=${{ env.STAGING_VITE_API_BASE_URL }}
             VITE_LARAVEL_ORIGIN=${{ env.STAGING_VITE_LARAVEL_ORIGIN }}
-          # :staging = tag di động. :sha-XXX = tag bất biến — KHÔNG dùng để
-          # promote thẳng lên production như backend (Vite bake env lúc build,
-          # xem comment trong Dockerfile.staging) nhưng vẫn giữ để debug/rollback
-          # đúng đúng bản staging nào đang chạy.
+          # :staging = tag di động (luôn trỏ bản mới nhất). :sha-XXX = tag BẤT
+          # BIẾN để production promote đúng artifact đã test — LƯU Ý: khác
+          # backend infun, production của infuncms REBUILD chứ không retag
+          # (Vite bake build-arg khác cho domain khác), xem comment đầu
+          # Dockerfile.staging.
           tags: |
             ${{ env.IMAGE_WEB }}:staging
             ${{ env.IMAGE_WEB }}:sha-${{ github.sha }}
@@ -76,8 +79,9 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H 100.99.170.2 >> ~/.ssh/known_hosts
 
-      # Repo mirror riêng cho infuncms trên máy staging (song song với
-      # /home/an-my/infun của backend) — xem deploy/DEPLOY-cms.tienpv.shop.md.
+      # Máy staging (Ubuntu) — repo mirror ở /home/an-my/infuncms. Thư mục
+      # phải được `git clone` sẵn 1 lần thủ công trước khi workflow này chạy
+      # lần đầu (xem README/CLAUDE.md phần deploy).
       - name: Pull image + recreate container on staging
         run: |
           ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -i ~/.ssh/id_ed25519 an-my@100.99.170.2 "

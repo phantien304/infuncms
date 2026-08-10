@@ -6,9 +6,9 @@
  * đổi sang thanh search trên cùng cho nhất quán với product/blog.
  *
  * REST (xem routes/rcms.php + Api/Cms/Order/OrderController):
- *   GET    /order                  list (id_eq/invoice_no_cons/full_name_cons/
- *                                   order_status_id_eq/total_eq/created_at_cons/
- *                                   deleted_at/sort/order/page/per_page)
+ *   GET    /order                  list (id/invoice_no/full_name/order_status_id/
+ *                                   total/created_at/deleted_at/sort/order/page/per_page)
+ *                                   — tên cột trần, KHÔNG còn hậu tố _eq/_cons của base cũ.
  *   DELETE /order/{id}             xoá mềm 1
  *   PATCH  /order/{id}/restore     khôi phục 1
  *   POST   /order/bulk             { action:'delete'|'restore', ids:[] }
@@ -35,11 +35,11 @@ export default function OrderIndex() {
     const loading = useLoading();
 
     const [objSearch, setObjSearch] = useUrlSyncedState((searchParams) => ({
-        id_eq: searchParams.get('id_eq') || '',
-        invoice_no_cons: searchParams.get('invoice_no_cons') || '',
-        full_name_cons: searchParams.get('full_name_cons') || '',
-        order_status_id_eq: searchParams.get('order_status_id_eq') || '',
-        created_at_cons: searchParams.get('created_at_cons') || '',
+        id: searchParams.get('id') || '',
+        invoice_no: searchParams.get('invoice_no') || '',
+        full_name: searchParams.get('full_name') || '',
+        order_status_id: searchParams.get('order_status_id') || '',
+        created_at: searchParams.get('created_at') || '',
         deleted_at: intParam(searchParams, 'deleted_at', 1),
         order: searchParams.get('order') || 'desc',
         sort: searchParams.get('sort') || 'id',
@@ -61,11 +61,11 @@ export default function OrderIndex() {
         return api
             .get('/order', {
                 params: {
-                    id_eq: objSearch.id_eq || undefined,
-                    invoice_no_cons: objSearch.invoice_no_cons || undefined,
-                    full_name_cons: objSearch.full_name_cons || undefined,
-                    order_status_id_eq: objSearch.order_status_id_eq || undefined,
-                    created_at_cons: objSearch.created_at_cons || undefined,
+                    id: objSearch.id || undefined,
+                    invoice_no: objSearch.invoice_no || undefined,
+                    full_name: objSearch.full_name || undefined,
+                    order_status_id: objSearch.order_status_id || undefined,
+                    created_at: objSearch.created_at || undefined,
                     sort: objSearch.sort,
                     order: objSearch.order,
                     deleted_at: objSearch.deleted_at,
@@ -187,8 +187,8 @@ export default function OrderIndex() {
                                         type="text"
                                         className="form-control"
                                         placeholder={t('OrderId')}
-                                        value={objSearch.id_eq}
-                                        onChange={(e) => setObjSearch((s) => ({ ...s, id_eq: e.target.value }))}
+                                        value={objSearch.id}
+                                        onChange={(e) => setObjSearch((s) => ({ ...s, id: e.target.value }))}
                                     />
                                 </div>
                                 <div className="col-xl-2">
@@ -196,8 +196,8 @@ export default function OrderIndex() {
                                         type="text"
                                         className="form-control"
                                         placeholder={t('InvoiceNo')}
-                                        value={objSearch.invoice_no_cons}
-                                        onChange={(e) => setObjSearch((s) => ({ ...s, invoice_no_cons: e.target.value }))}
+                                        value={objSearch.invoice_no}
+                                        onChange={(e) => setObjSearch((s) => ({ ...s, invoice_no: e.target.value }))}
                                     />
                                 </div>
                                 <div className="col-xl-2">
@@ -205,8 +205,8 @@ export default function OrderIndex() {
                                         type="text"
                                         className="form-control"
                                         placeholder={t('Customer')}
-                                        value={objSearch.full_name_cons}
-                                        onChange={(e) => setObjSearch((s) => ({ ...s, full_name_cons: e.target.value }))}
+                                        value={objSearch.full_name}
+                                        onChange={(e) => setObjSearch((s) => ({ ...s, full_name: e.target.value }))}
                                     />
                                 </div>
                                 <div className="col-xl-2">
@@ -214,8 +214,8 @@ export default function OrderIndex() {
                                         style={{ width: '100%' }}
                                         allowClear
                                         placeholder={t('OrderStatus')}
-                                        value={objSearch.order_status_id_eq || undefined}
-                                        onChange={(v) => setObjSearch((s) => ({ ...s, order_status_id_eq: v ?? '' }))}
+                                        value={objSearch.order_status_id || undefined}
+                                        onChange={(v) => setObjSearch((s) => ({ ...s, order_status_id: v ?? '' }))}
                                         options={orderStatuses.map((s) => ({ label: s.name, value: s.id }))}
                                     />
                                 </div>
@@ -224,8 +224,8 @@ export default function OrderIndex() {
                                         style={{ width: '100%' }}
                                         format="YYYY-MM-DD"
                                         placeholder={t('DateCreate')}
-                                        value={objSearch.created_at_cons ? dayjs(objSearch.created_at_cons) : null}
-                                        onChange={(d) => setObjSearch((s) => ({ ...s, created_at_cons: d ? d.format('YYYY-MM-DD') : '' }))}
+                                        value={objSearch.created_at ? dayjs(objSearch.created_at) : null}
+                                        onChange={(d) => setObjSearch((s) => ({ ...s, created_at: d ? d.format('YYYY-MM-DD') : '' }))}
                                     />
                                 </div>
                                 <div className="col-xl-2">
