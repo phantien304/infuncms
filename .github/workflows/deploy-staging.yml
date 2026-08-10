@@ -20,8 +20,17 @@ env:
   # chạy) — xem comment đầu Dockerfile.staging. Đổi giá trị ở đây nếu backend
   # staging đổi domain, KHÔNG sửa trong docker-compose.staging.yml (chỉ dùng
   # cho build tay tại chỗ).
-  STAGING_VITE_API_BASE_URL: http://infun.co/rcms
-  STAGING_VITE_LARAVEL_ORIGIN: http://infun.co
+  #
+  # KHÔNG dùng infun.co ở đây — nó LÀ domain thật (public, trỏ production),
+  # chỉ "tưởng" là local vì máy dev có dòng override trong hosts
+  # (127.0.0.1 infun.co). Máy nào không có dòng override đó (bất kỳ ai khác mở
+  # CMS staging) sẽ gọi thẳng ra domain production thật thay vì backend
+  # staging. Dùng Tailscale IP của máy staging (100.99.170.2, cổng 8100 =
+  # infun-web-staging) — vào được từ mọi máy trong tailnet, không cần domain/
+  # hosts override nào cả. Nhớ: infun/docker-compose.staging.yml phải khai
+  # CORS_ALLOWED_ORIGINS cho đúng origin CMS staging (đã thêm, xem comment ở đó).
+  STAGING_VITE_API_BASE_URL: http://100.99.170.2:8100/rcms
+  STAGING_VITE_LARAVEL_ORIGIN: http://100.99.170.2:8100
 
 jobs:
   build-and-push:

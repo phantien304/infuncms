@@ -21,8 +21,12 @@ services:
       context: .
       dockerfile: Dockerfile.staging
       args:
-        VITE_API_BASE_URL: ${STAGING_VITE_API_BASE_URL:-http://infun.co/rcms}
-        VITE_LARAVEL_ORIGIN: ${STAGING_VITE_LARAVEL_ORIGIN:-http://infun.co}
+        # infun.co là domain PUBLIC thật (trỏ production) — chỉ "tưởng" local
+        # vì máy dev có override trong hosts. Default ở đây phải là địa chỉ
+        # backend staging thật sự vào được (Tailscale IP máy staging), không
+        # phải infun.co — xem comment trong .github/workflows/deploy-staging.yml.
+        VITE_API_BASE_URL: ${STAGING_VITE_API_BASE_URL:-http://100.99.170.2:8100/rcms}
+        VITE_LARAVEL_ORIGIN: ${STAGING_VITE_LARAVEL_ORIGIN:-http://100.99.170.2:8100}
     container_name: infuncms-web-staging
     restart: unless-stopped
     ports:
