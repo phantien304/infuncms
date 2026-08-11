@@ -45,8 +45,11 @@ ARG VITE_LARAVEL_ORIGIN
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL} \
     VITE_LARAVEL_ORIGIN=${VITE_LARAVEL_ORIGIN}
 
-RUN if [ -z "$VITE_API_BASE_URL" ] || [ -z "$VITE_LARAVEL_ORIGIN" ]; then \
-        echo "ERROR: thiếu --build-arg VITE_API_BASE_URL / VITE_LARAVEL_ORIGIN" >&2; \
+# CHỈ bắt buộc VITE_API_BASE_URL — VITE_LARAVEL_ORIGIN RỖNG là giá trị HỢP LỆ
+# (same-origin, ensureCsrfCookie() gọi tương đối tới trang đang mở, xem
+# deploy/nginx-spa.conf) nên không thể coi rỗng = quên truyền như trước.
+RUN if [ -z "$VITE_API_BASE_URL" ]; then \
+        echo "ERROR: thiếu --build-arg VITE_API_BASE_URL" >&2; \
         exit 1; \
     fi
 
@@ -57,5 +60,11 @@ RUN npm run build
 # ───────────────────────────────────────────────────────────────────────────
 FROM nginx:1.27-alpine AS web
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY deploy/nginx-spa.conf /etc/nginx/conf.d/default.conf
+# .template (không phải conf.d/default.conf thẳng): base image nginx:1.27-alpine
+# có sẵn docker-entrypoint.d/20-envsubst-on-templates.sh — tự envsubst mọi biến
+# ${VAR} trong file .template bằng ENV của container lúc start, ghi ra conf.d/.
+# Cần cơ chế này vì địa chỉ backend proxy (BACKEND_PROXY_HOST/PORT — xem
+# deploy/nginx-spa.conf) là thứ đổi theo môi trường (staging/production), khác
+# VITE_* ở trên vốn bake lúc build — đây đọc lúc container CHẠY.
+COPY deploy/nginx-spa.conf /etc/nginx/templates/default.conf.template
 EXPOSE 80

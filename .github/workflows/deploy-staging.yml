@@ -21,16 +21,14 @@ env:
   # staging đổi domain, KHÔNG sửa trong docker-compose.staging.yml (chỉ dùng
   # cho build tay tại chỗ).
   #
-  # KHÔNG dùng infun.co ở đây — nó LÀ domain thật (public, trỏ production),
-  # chỉ "tưởng" là local vì máy dev có dòng override trong hosts
-  # (127.0.0.1 infun.co). Máy nào không có dòng override đó (bất kỳ ai khác mở
-  # CMS staging) sẽ gọi thẳng ra domain production thật thay vì backend
-  # staging. Dùng Tailscale IP của máy staging (100.99.170.2, cổng 8100 =
-  # infun-web-staging) — vào được từ mọi máy trong tailnet, không cần domain/
-  # hosts override nào cả. Nhớ: infun/docker-compose.staging.yml phải khai
-  # CORS_ALLOWED_ORIGINS cho đúng origin CMS staging (đã thêm, xem comment ở đó).
-  STAGING_VITE_API_BASE_URL: http://100.99.170.2:8100/rcms
-  STAGING_VITE_LARAVEL_ORIGIN: http://100.99.170.2:8100
+  # RỖNG/TƯƠNG ĐỐI cố ý — nginx tự proxy /rcms + /sanctum sang backend
+  # cùng-origin với SPA (xem deploy/nginx-spa.conf + docker-compose.staging.yml).
+  # TRƯỚC đây trỏ tuyệt đối vào Tailscale IP (100.99.170.2:8100): vỡ CSRF nếu
+  # ai mở CMS bằng hostname khác (vd localhost:8200) vì cookie session là
+  # host-only — sự cố 2026-08-10. Same-origin xoá hẳn lớp vấn đề này, không
+  # phụ thuộc bạn gõ hostname nào vào thanh địa chỉ.
+  STAGING_VITE_API_BASE_URL: /rcms
+  STAGING_VITE_LARAVEL_ORIGIN: ""
 
 jobs:
   build-and-push:

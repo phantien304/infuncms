@@ -7,8 +7,8 @@
 # cùng quy ước với backend infun (xem docs/STAGING.md phần "image bất biến").
 #
 #   docker compose -f docker-compose.staging.yml build \
-#     --build-arg VITE_API_BASE_URL=http://infun.co/rcms \
-#     --build-arg VITE_LARAVEL_ORIGIN=http://infun.co
+#     --build-arg VITE_API_BASE_URL=/rcms \
+#     --build-arg VITE_LARAVEL_ORIGIN=
 #   docker compose -f docker-compose.staging.yml up -d
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -21,14 +21,26 @@ services:
       context: .
       dockerfile: Dockerfile.staging
       args:
-        # infun.co là domain PUBLIC thật (trỏ production) — chỉ "tưởng" local
-        # vì máy dev có override trong hosts. Default ở đây phải là địa chỉ
-        # backend staging thật sự vào được (Tailscale IP máy staging), không
-        # phải infun.co — xem comment trong .github/workflows/deploy-staging.yml.
-        VITE_API_BASE_URL: ${STAGING_VITE_API_BASE_URL:-http://100.99.170.2:8100/rcms}
-        VITE_LARAVEL_ORIGIN: ${STAGING_VITE_LARAVEL_ORIGIN:-http://100.99.170.2:8100}
+        # RỖNG/TƯƠNG ĐỐI cố ý (khác trước đây trỏ tuyệt đối vào Tailscale IP):
+        # nginx (deploy/nginx-spa.conf) giờ tự proxy /rcms + /sanctum sang
+        # backend cùng-origin với trang SPA — cần thiết vì cookie session
+        # (Sanctum SPA, không set SESSION_DOMAIN) là host-only, JS trên trang
+        # mở bằng hostname A không đọc được cookie set bởi hostname B. SPA gọi
+        # tuyệt đối sang Tailscale IP trong khi ai đó mở CMS bằng localhost:8200
+        # → XSRF-TOKEN không đọc được → CSRF mismatch dù backend đúng (sự cố
+        # 2026-08-10). Same-origin xoá hẳn lớp vấn đề này — xem thêm docblock
+        # đầu deploy/nginx-spa.conf.
+        VITE_API_BASE_URL: ${STAGING_VITE_API_BASE_URL:-/rcms}
+        VITE_LARAVEL_ORIGIN: ${STAGING_VITE_LARAVEL_ORIGIN:-}
     container_name: infuncms-web-staging
     restart: unless-stopped
+    # nginx tự envsubst 2 biến này vào deploy/nginx-spa.conf lúc container
+    # start (xem Dockerfile.staging — COPY vào /etc/nginx/templates/). Backend
+    # cố định tên "infun-web-staging" (infun/docker-compose.staging.yml,
+    # container_name, không scale) nên trỏ thẳng, không cần biến theo replica.
+    environment:
+      BACKEND_PROXY_HOST: "${STAGING_BACKEND_PROXY_HOST:-infun-web-staging}"
+      BACKEND_PROXY_PORT: "${STAGING_BACKEND_PROXY_PORT:-80}"
     ports:
       # 8200: tách khỏi 8100 (infun-web staging) để chạy song song trên cùng
       # máy staging. Đổi qua STAGING_CMS_WEB_PORT nếu trùng cổng khác.
@@ -41,7 +53,16 @@ services:
       start_period: 5s
     networks:
       - infuncms-net
+      # Network của backend infun (infun/docker-compose.staging.yml, project
+      # "infun" → tên thật "infun_infun-net" — `docker network ls` để xác
+      # nhận nếu đổi tên project). external vì network này do compose CỦA
+      # infun tạo, không phải infuncms — thiếu network này thì nginx không
+      # resolve được "infun-web-staging", /rcms sẽ 502.
+      - infun-net
 
 networks:
   infuncms-net:
     driver: bridge
+  infun-net:
+    name: ${STAGING_INFUN_NETWORK:-infun_infun-net}
+    external: true
