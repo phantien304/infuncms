@@ -22,6 +22,17 @@ services:
     image: ghcr.io/phantien304/infuncms-web:production
     container_name: infuncms-web-prod
     restart: unless-stopped
+    # Nginx (deploy/nginx-spa.conf) giờ luôn cần 2 biến này để envsubst config
+    # lúc start (Dockerfile.staging COPY vào /etc/nginx/templates/) — THIẾU
+    # thì literal "${BACKEND_PROXY_HOST}" còn nguyên trong nginx.conf, nginx
+    # parse lỗi, container không lên. Ở production khối /rcms+/sanctum thực
+    # ra KHÔNG được dùng tới (SPA gọi tuyệt đối thẳng tienpv.shop/rcms, xem
+    # deploy/DEPLOY-cms.tienpv.shop.md mục 4 + comment build-args ở
+    # .github/workflows/deploy-production.yml) — set để nginx start được, có
+    # sẵn nếu sau này đổi VITE_API_BASE_URL sang tương đối như staging.
+    environment:
+      BACKEND_PROXY_HOST: "${PROD_BACKEND_PROXY_HOST:-infun-web-prod}"
+      BACKEND_PROXY_PORT: "${PROD_BACKEND_PROXY_PORT:-80}"
     ports:
       - "${PROD_CMS_WEB_PORT:-8200}:80"
     healthcheck:
@@ -32,6 +43,15 @@ services:
       start_period: 5s
     networks:
       - infuncms-net
+      # Không bắt buộc để trang chạy (xem comment BACKEND_PROXY_HOST ở trên)
+      # nhưng cần có network này thì hostname infun-web-prod mới resolve được
+      # — thiếu thì môi trường resolver của nginx (default.conf) log lỗi mỗi
+      # 10s dù không ảnh hưởng response thật nào (không request nào đi qua
+      # location đó cả). Gắn cho nhất quán + phòng hờ đổi kiến trúc sau này.
+      - infun-net
 
 networks:
   infuncms-net:
+  infun-net:
+    name: ${PROD_INFUN_NETWORK:-infun_infun-net}
+    external: true
