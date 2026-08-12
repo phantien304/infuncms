@@ -39,6 +39,7 @@ import useLoading from '@/core/hooks/useLoading';
 import useClickOutside from '@/core/hooks/useClickOutside';
 import useUserStore from '@/core/stores/userStore';
 import CONSTANTS from '@/core/utils/constants';
+import { resolveImageUrl } from '@/core/utils/imageUrl';
 import { confirm, error, success } from '@/core/services/alert';
 import MenuLeft from './MenuLeft';
 import Modal from '@/components/ui/Modal';
@@ -121,7 +122,15 @@ export default function AppLayout() {
     // v-if="currentUser" — render trống nếu không có user
     if (!currentUser) return null;
 
-    const configLogo = appSettings?.config?.config_logo || '';
+    // BUG đã fix (2026-08-12) — giống bug ảnh sản phẩm ở product/index.jsx
+    // (2026-08-02): trước đây nối thẳng '/' + configLogo (path tương đối
+    // trong DB, vd "infun/2026-08-11/logo_infunstudio_3.png") làm src ⇒
+    // trình duyệt resolve theo origin CMS (cms.tienpv.shop) thay vì domain
+    // CDN thật (appSettings.storageDomain) ⇒ logo luôn 404/hiện path thô.
+    const configLogo = resolveImageUrl(
+        appSettings?.config?.config_logo || '',
+        appSettings?.storageDomain,
+    );
 
     return (
         <div id="app-full">
@@ -131,10 +140,10 @@ export default function AppLayout() {
                     <div className="topbar-left">
                         <Link to="/" className="logo">
                             <span>
-                                <img src={'/' + configLogo} alt="" height="50" />
+                                <img src={configLogo} alt="" height="50" />
                             </span>
                             <i>
-                                <img src={'/' + configLogo} alt="" height="40" />
+                                <img src={configLogo} alt="" height="40" />
                             </i>
                         </Link>
                     </div>
