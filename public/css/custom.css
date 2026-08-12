@@ -12,6 +12,25 @@
     background: #f7f7f7;
 }
 
+/* Logo CMS: ảnh gốc không cố định tỉ lệ nên logo ngang dài dễ tràn khỏi
+   khung 240px của topbar-left, đè lên MenuLeft bên dưới. Giới hạn max-width
+   theo khung (trừ padding) + căn giữa bằng flex thay vì chỉ dựa line-height. */
+.topbar .topbar-left .logo {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    height: 55px;
+    padding: 0 15px;
+}
+
+.topbar .topbar-left .logo img {
+    max-width: 100%;
+    max-height: 40px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
 .swal2-icon {
     zoom: 55% !important;
 }
