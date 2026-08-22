@@ -92,7 +92,8 @@ const CRUD_ENTITIES = [
     ['store-review', 'storeReview'],
     ['product-draft', 'productDraft'],
     ['manufacturer', 'manufacturer'],
-    ['review', 'review'],
+    ['review-criteria', 'reviewCriteria'],
+    ['review-tag', 'reviewTag'],
     ['option', 'option'],
     ['filter', 'filter'],
     ['attribute', 'attribute'],
@@ -102,7 +103,10 @@ const CRUD_ENTITIES = [
     ['menu', 'menu'],
     ['coupon', 'coupon'],
     ['voucher-theme', 'voucherTheme'],
+    // Marketing mới của infun (mt219 không có 2 màn này)
+    ['gift', 'gift'],
     ['voucher', 'voucher'],
+    ['voucher-reward-rule', 'voucherRewardRule'],
     ['language', 'language'],
     ['role', 'role'],
     ['user', 'user'],
@@ -139,8 +143,18 @@ export default function AppRoutes() {
                 <Route path="/contact/list" element={<Page name="contact/index" />} />
                 <Route path="/contact/:id" element={<Page name="contact/form" />} />
 
-                {/* --- Mail: chỉ /send --- */}
+                {/* --- Review: list + /add (review "mồi" admin tạo) + :id (sửa/kiểm duyệt) --- */}
+                <Route path="/review/list" element={<Page name="review/index" />} />
+                <Route path="/review/add" element={<Page name="review/form" />} />
+                <Route path="/review/:id" element={<Page name="review/form" />} />
+
+                {/* --- Mail marketing: soạn/gửi + lịch sử chiến dịch.
+                    Không cần lo "/mail/send" bị "/mail/:id" nuốt: React Router
+                    v6 xếp hạng segment tĩnh cao hơn segment động, thắng bất kể
+                    thứ tự khai báo. --- */}
                 <Route path="/mail/send" element={<Page name="mail/form" />} />
+                <Route path="/mail/list" element={<Page name="mail/index" />} />
+                <Route path="/mail/:id" element={<Page name="mail/detail" />} />
 
                 {/* --- Report: chỉ /list --- */}
                 <Route path="/report/list" element={<Page name="report/index" />} />

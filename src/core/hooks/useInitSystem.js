@@ -24,11 +24,14 @@ import { useEffect, useState } from 'react';
 import api from '../services/api';
 import useLoading from './useLoading';
 import useAppSettingsStore from '../stores/appSettingsStore';
+import useUserStore from '../stores/userStore';
+import CONSTANTS from '../utils/constants';
 import { alert as alertModal } from '../services/alert';
 
 export default function useInitSystem() {
     const loading = useLoading();
     const setAppSettings = useAppSettingsStore((s) => s.setAppSettings);
+    const setPermissions = useUserStore((s) => s.setPermissions);
 
     const [done, setDone] = useState(false);
     const [error, setError] = useState(null);
@@ -79,6 +82,27 @@ export default function useInitSystem() {
             .finally(() => {
                 inst.close();
             });
+
+        /**
+         * Refresh permissions từ GET /me mỗi lần app khởi động (F5/mở tab
+         * mới) — KHÔNG chỉ lúc login. `permissions` cache trong localStorage
+         * chỉ được ghi ở login.jsx, nên nếu registry quyền (CmsPermissionEntity)
+         * có entity mới sau lúc user đăng nhập lần cuối, PermissionMatrix sẽ
+         * disable nhầm các quyền entity đó dù backend đã cho phép — bug thật
+         * đã gặp ("nhiều quyền trong mục khác không tích được") do phiên CMS
+         * đăng nhập từ trước khi hàng chục entity mới được đăng ký. Chỉ gọi
+         * khi đã có USERNAME (đã đăng nhập) — bỏ qua lỗi vì đây là refresh
+         * nền, không chặn render app; 401 (session hết hạn) đã có interceptor
+         * api.js xử lý.
+         */
+        if (typeof localStorage !== 'undefined' && localStorage.getItem(CONSTANTS.USERNAME)) {
+            api.get('/me')
+                .then((res) => {
+                    if (cancelled) return;
+                    setPermissions(res.data?.data?.permissions || []);
+                })
+                .catch(() => {});
+        }
 
         return () => {
             cancelled = true;

@@ -33,6 +33,7 @@ export default function FormSearch({
     onSearch,
     changeStatus,
     showLanguage = true,
+    showAdd = true,
 }) {
     const t = useTranslation();
     const listLanguages = useListLanguages();
@@ -124,11 +125,13 @@ export default function FormSearch({
                         />
                     </div>
 
-                    <div className="col-xl-1">
-                        <Link to={addPath} className="btn btn-primary">
-                            {t('Add')}
-                        </Link>
-                    </div>
+                    {showAdd && (
+                        <div className="col-xl-1">
+                            <Link to={addPath} className="btn btn-primary">
+                                {t('Add')}
+                            </Link>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

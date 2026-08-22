@@ -32,12 +32,24 @@ const MENU = [
             { path: '/attribute/list', label: 'Attribute' },
             { path: '/option/list', label: 'Option' },
             { path: '/manufacturer/list', label: 'Manufacture' },
-            { path: '/review/list', label: 'Review' },
             { path: '/store-review/list', label: 'StoreReview' },
             { path: '/information/list', label: 'Information', permission: 'list-information' },
             { path: '/banner/list', label: 'Banner', permission: 'list-banner' },
             { path: '/ingredient/list', label: 'Ingredient' },
             { path: '/contact/list', label: 'Contact' },
+        ],
+    },
+    {
+        // Review sản phẩm — tách ngang hàng Product (2026-08) vì đã phát
+        // triển vượt xa 1 mục con đơn giản: có thêm ReviewCriteria (tiêu
+        // chí chấm điểm) và ReviewTag (nhãn) là 2 danh mục quản lý riêng.
+        id: 'review',
+        label: 'Review',
+        icon: 'fa fa-star',
+        children: [
+            { path: '/review/list', label: 'Review' },
+            { path: '/review-criteria/list', label: 'ReviewCriteria' },
+            { path: '/review-tag/list', label: 'ReviewTag' },
         ],
     },
     {
@@ -54,10 +66,17 @@ const MENU = [
         label: 'Marketing',
         icon: 'fa fa-bullhorn',
         children: [
-            { path: '/coupon/list', label: 'Coupon' },
-            { path: '/voucher/list', label: 'GiftVoucher' },
-            { path: '/voucher-theme/list', label: 'VoucherTheme' },
-            { path: '/mail/send', label: 'SendMail' },
+            { path: '/coupon/list', label: 'Coupon', permission: 'list-coupon' },
+            { path: '/voucher/list', label: 'VoucherList', permission: 'list-voucher' },
+            { path: '/voucher-theme/list', label: 'VoucherTheme', permission: 'list-voucher-theme' },
+            {
+                path: '/voucher-reward-rule/list',
+                label: 'VoucherRewardRule',
+                permission: 'list-voucher-reward-rule',
+            },
+            { path: '/gift/list', label: 'Gift', permission: 'list-gift' },
+            { path: '/mail/send', label: 'SendMail', permission: 'create-mail-campaign' },
+            { path: '/mail/list', label: 'MailCampaign', permission: 'list-mail-campaign' },
         ],
     },
     {
